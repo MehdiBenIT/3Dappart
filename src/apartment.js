@@ -1,113 +1,148 @@
 /*
  * ============================================================================
- *  CONFIGURATION DE L'APPARTEMENT  —  ⚠️  DONNÉES PLACEHOLDER  ⚠️
+ *  CONFIGURATION DE L'APPARTEMENT  —  ⚠️  DIMENSIONS APPROXIMATIVES  ⚠️
  * ============================================================================
  *
- *  Tout ce qui est ici est INVENTÉ pour que l'app tourne tout de suite.
- *  Dès que Mehdi donne ses vraies mesures, on remplace les chiffres.
+ *  Layout fidèle aux croquis de Mehdi (T1 bis) MAIS les cotes sont estimées.
+ *  Dès que les vraies mesures arrivent, on remplace simplement les chiffres.
  *
  *  Repère : tout est en MÈTRES.
- *    - x : gauche → droite
- *    - z : haut → bas du plan (vers l'observateur)
+ *    - x : gauche → droite            - z : haut (nord) → bas (sud)
  *    - y : hauteur (géré automatiquement)
  *
- *  Une pièce est un rectangle défini par son coin haut-gauche (x, z),
+ *  Une pièce = rectangle défini par son coin haut-gauche (x, z),
  *  sa largeur (width, sur X) et sa profondeur (depth, sur Z).
  *
- *  Les ouvertures (portes / fenêtres) et radiateurs se placent sur un CÔTÉ :
- *    - 'N' = mur du haut   (z minimum)
- *    - 'S' = mur du bas    (z maximum)
- *    - 'W' = mur de gauche (x minimum)
- *    - 'E' = mur de droite (x maximum)
+ *  Côtés pour ouvertures / radiateurs :
+ *    'N' = mur du haut (nord, z min)   'S' = mur du bas (sud, z max)
+ *    'W' = mur de gauche (x min)       'E' = mur de droite (x max)
  *  `offset` = distance depuis le coin gauche/haut du mur, le long du mur.
+ *
+ *  Plan général (vue de dessus, nord = haut = façade avec les fenêtres) :
+ *
+ *      ┌──────────┬────────────────────────┐
+ *      │ CHAMBRE  │      SALLE DE VIE       │   ← fenêtres au nord
+ *      │ (fenêtre)│  bureau · canapé · TV   │
+ *      ├──────────┤       cuisine (SO)      │
+ *      │  SdB     │                         │
+ *      └──────────┴───────┬────────┬────────┘
+ *                         │COULOIR │
+ *                         │ entrée │
+ *                         └────────┘
  * ============================================================================
  */
 
-export const IS_PLACEHOLDER = true;
+export const IS_PLACEHOLDER = true; // dimensions estimées, pas encore mesurées
 
 export const apartment = {
   meta: {
-    name: "Mon appartement (exemple)",
+    name: "Mon appartement (T1 bis)",
     unit: "m",
   },
 
-  // Hauteur sous plafond et épaisseur des murs (valeurs par défaut françaises).
   wallHeight: 2.5,
   wallThickness: 0.1,
 
   rooms: [
-    {
-      id: "sejour",
-      name: "Séjour",
-      x: 0, z: 0, width: 4.5, depth: 4.0,
-      floorColor: "#d9c7a3",
-      openings: [
-        { type: "window", side: "N", offset: 1.0, width: 1.6, height: 1.4, sill: 0.9 },
-        { type: "door", side: "S", offset: 1.5, width: 0.9, height: 2.1 }, // vers couloir
-      ],
-      radiators: [{ side: "N", offset: 1.1, width: 1.0, height: 0.6 }],
-    },
-    {
-      id: "cuisine",
-      name: "Cuisine",
-      x: 4.5, z: 0, width: 2.5, depth: 4.0,
-      floorColor: "#cfd6d3",
-      openings: [
-        { type: "window", side: "N", offset: 0.7, width: 1.0, height: 1.2, sill: 1.0 },
-        { type: "opening", side: "W", offset: 1.4, width: 1.2, height: 2.1 }, // ouvert sur séjour
-      ],
-      radiators: [{ side: "E", offset: 1.5, width: 0.8, height: 0.6 }],
-    },
-    {
-      id: "couloir",
-      name: "Entrée / Couloir",
-      x: 0, z: 4.0, width: 2.0, depth: 3.0,
-      floorColor: "#c9bfae",
-      openings: [
-        { type: "door", side: "S", offset: 0.5, width: 0.9, height: 2.1 }, // porte d'entrée
-        { type: "door", side: "E", offset: 0.8, width: 0.9, height: 2.1 }, // vers chambre
-      ],
-      radiators: [],
-    },
+    // --- CHAMBRE (nord-ouest) ---
     {
       id: "chambre",
       name: "Chambre",
-      x: 2.0, z: 4.0, width: 3.0, depth: 3.0,
-      floorColor: "#c8b6d6",
+      x: 0, z: 0, width: 3.0, depth: 3.2,
+      floorColor: "#e6ddd2",
       openings: [
-        { type: "window", side: "S", offset: 1.0, width: 1.4, height: 1.4, sill: 0.9 },
+        { type: "window", side: "N", offset: 1.0, width: 1.2, height: 1.4, sill: 0.9 },
+        { type: "door", side: "E", offset: 0.4, width: 0.9, height: 2.1 }, // vers salle de vie
+        { type: "door", side: "S", offset: 0.5, width: 0.8, height: 2.1 }, // vers salle de bain
       ],
-      radiators: [{ side: "S", offset: 1.1, width: 1.0, height: 0.6 }],
+      radiators: [{ side: "N", offset: 1.05, width: 1.0, height: 0.6 }],
     },
+
+    // --- SALLE DE BAIN (sud-ouest, reliée à la chambre) ---
     {
       id: "sdb",
       name: "Salle de bain",
-      x: 5.0, z: 4.0, width: 2.0, depth: 3.0,
-      floorColor: "#bcd3dd",
+      x: 0, z: 3.2, width: 3.0, depth: 2.2,
+      floorColor: "#d5e0e3",
       openings: [
-        { type: "door", side: "W", offset: 1.0, width: 0.8, height: 2.1 },
-        { type: "window", side: "E", offset: 1.0, width: 0.6, height: 0.8, sill: 1.4 },
+        { type: "door", side: "N", offset: 0.5, width: 0.8, height: 2.1 }, // depuis la chambre
+      ],
+      radiators: [],
+    },
+
+    // --- SALLE DE VIE (salon + cuisine ouverte, à l'est) ---
+    {
+      id: "sejour",
+      name: "Salle de vie",
+      x: 3.0, z: 0, width: 5.0, depth: 5.4,
+      floorColor: "#e3d5c0",
+      openings: [
+        { type: "window", side: "N", offset: 1.5, width: 1.4, height: 1.4, sill: 0.9 },
+        { type: "window", side: "N", offset: 3.3, width: 1.4, height: 1.4, sill: 0.9 },
+        { type: "door", side: "W", offset: 0.4, width: 0.9, height: 2.1 },    // vers chambre
+        { type: "opening", side: "S", offset: 2.75, width: 1.0, height: 2.1 }, // vers couloir
+      ],
+      radiators: [
+        { side: "E", offset: 0.4, width: 1.0, height: 0.6 },
+        { side: "W", offset: 2.2, width: 1.0, height: 0.6 },
+      ],
+    },
+
+    // --- COULOIR / ENTRÉE (au sud) ---
+    {
+      id: "couloir",
+      name: "Entrée / Couloir",
+      x: 5.5, z: 5.4, width: 1.6, depth: 2.4,
+      floorColor: "#ddd6ca",
+      openings: [
+        { type: "opening", side: "N", offset: 0.25, width: 1.0, height: 2.1 }, // vers salle de vie
+        { type: "door", side: "S", offset: 0.4, width: 0.9, height: 2.1 },      // porte d'entrée
       ],
       radiators: [],
     },
   ],
 
-  // Meubles — dimensions en mètres : w (largeur X), d (profondeur Z), h (hauteur Y).
-  // x,z = CENTRE du meuble au sol ; rotation en degrés autour de la verticale.
+  // Meubles — x,z = CENTRE au sol ; rotation en degrés ; dims en mètres (L×P×H).
   furniture: [
+    // Chambre
     { id: "lit", name: "Lit double", type: "bed", room: "chambre",
-      x: 2.8, z: 5.0, w: 1.4, d: 1.9, h: 0.5, rotation: 0, color: "#8d6e63" },
+      x: 1.5, z: 1.5, w: 1.4, d: 1.9, h: 0.5, rotation: 0, color: "#9a8478" },
     { id: "commode", name: "Commode", type: "dresser", room: "chambre",
-      x: 4.5, z: 4.4, w: 0.8, d: 0.45, h: 0.9, rotation: 0, color: "#6d4c41" },
+      x: 0.45, z: 2.7, w: 0.8, d: 0.45, h: 0.9, rotation: 90, color: "#7d6b5d" },
+    { id: "chaise", name: "Chaise", type: "chair", room: "chambre",
+      x: 2.6, z: 0.55, w: 0.45, d: 0.45, h: 0.9, rotation: 0, color: "#8a8a8a" },
+
+    // Salle de bain
+    { id: "douche", name: "Douche", type: "shower", room: "sdb",
+      x: 2.4, z: 4.9, w: 0.9, d: 0.9, h: 2.0, rotation: 0, color: "#afc4cc" },
+    { id: "wc", name: "Toilette", type: "toilet", room: "sdb",
+      x: 1.4, z: 5.0, w: 0.4, d: 0.6, h: 0.8, rotation: 0, color: "#f0f0f0" },
+    { id: "lavabo", name: "Lavabo", type: "sink", room: "sdb",
+      x: 0.5, z: 3.7, w: 0.6, d: 0.45, h: 0.85, rotation: 0, color: "#e6e9ec" },
+
+    // Salle de vie — coin salon
     { id: "canape", name: "Canapé", type: "sofa", room: "sejour",
-      x: 1.2, z: 3.4, w: 2.0, d: 0.9, h: 0.8, rotation: 0, color: "#546e7a" },
-    { id: "table", name: "Table", type: "table", room: "sejour",
-      x: 3.0, z: 1.6, w: 1.2, d: 0.8, h: 0.75, rotation: 0, color: "#795548" },
+      x: 4.3, z: 3.0, w: 2.0, d: 0.9, h: 0.8, rotation: 90, color: "#6b7784" },
+    { id: "meuble-tv", name: "Meuble TV", type: "tv-unit", room: "sejour",
+      x: 7.7, z: 3.0, w: 1.6, d: 0.4, h: 0.5, rotation: 90, color: "#5f5f5f" },
+    { id: "tv", name: "TV", type: "tv", room: "sejour",
+      x: 7.9, z: 3.0, w: 1.1, d: 0.06, h: 0.65, rotation: 90, color: "#1c1c1c" },
+    { id: "bureau", name: "Bureau", type: "desk", room: "sejour",
+      x: 5.0, z: 0.45, w: 1.4, d: 0.6, h: 0.75, rotation: 0, color: "#8a7a68" },
+
+    // Salle de vie — coin cuisine (sud-ouest)
+    { id: "frigo", name: "Frigo", type: "fridge", room: "sejour",
+      x: 3.4, z: 4.9, w: 0.6, d: 0.6, h: 1.8, rotation: 0, color: "#c9ccd1" },
+    { id: "plan-cuisine", name: "Plan cuisine", type: "counter", room: "sejour",
+      x: 4.7, z: 5.0, w: 2.0, d: 0.6, h: 0.9, rotation: 0, color: "#b9bdc2" },
+    { id: "rangement", name: "Rangement", type: "storage", room: "sejour",
+      x: 3.4, z: 3.5, w: 0.9, d: 0.6, h: 2.0, rotation: 90, color: "#8a8f95" },
   ],
 
-  // Idées / choses à acheter par pièce (synchronisables avec TickTick).
+  // Idées / achats par pièce (synchronisables avec TickTick).
   shopping: [
-    { id: "s1", room: "chambre", label: "Tête de lit", note: "", done: false },
-    { id: "s2", room: "sejour", label: "Bibliothèque murale", note: "", done: false },
+    { id: "s1", room: "sejour", label: "Étagères murales (gain de place)", note: "", done: false },
+    { id: "s2", room: "chambre", label: "Tête de lit avec rangement", note: "", done: false },
+    { id: "s3", room: "couloir", label: "Meuble d'entrée compact + miroir", note: "", done: false },
   ],
 };

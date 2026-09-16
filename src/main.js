@@ -268,7 +268,7 @@ if (IS_PLACEHOLDER) {
   const banner = document.createElement("div");
   banner.id = "placeholder-banner";
   banner.innerHTML =
-    "⚠️ Dimensions <b>fictives</b> (exemple). Donne tes vraies mesures à Claude pour bâtir ton appart réel.";
+    "⚠️ Dimensions <b>approximatives</b> (d'après les croquis). À ajuster avec les vraies mesures.";
   document.getElementById("app").appendChild(banner);
 }
 
