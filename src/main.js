@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { store } from "./store.js";
 import { buildApartment } from "./builder.js";
-import { buildFurniture, setLabelsVisible } from "./furniture.js";
+import { buildFurniture, setLabelsVisible, highlightFurniture } from "./furniture.js";
 import { initUI } from "./ui.js";
 import { IS_PLACEHOLDER } from "./apartment.js";
 
@@ -11,15 +11,35 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color("#eef1f5");
 
-// --- Lumières ---
-const hemi = new THREE.HemisphereLight("#ffffff", "#b9b5aa", 0.9);
+// Fond en dégradé doux.
+function gradientBackground() {
+  const c = document.createElement("canvas");
+  c.width = 2; c.height = 512;
+  const g = c.getContext("2d");
+  const grd = g.createLinearGradient(0, 0, 0, 512);
+  grd.addColorStop(0, "#f7f9fc");
+  grd.addColorStop(0.55, "#eaeef4");
+  grd.addColorStop(1, "#dfe4ec");
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 2, 512);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+scene.background = gradientBackground();
+
+// --- Lumières (clé + remplissage + ambiance ciel/sol) ---
+const hemi = new THREE.HemisphereLight("#ffffff", "#c3bfb4", 0.75);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight("#fff6e8", 1.1);
-sun.position.set(6, 12, 4);
+scene.add(new THREE.AmbientLight("#ffffff", 0.25));
+
+const sun = new THREE.DirectionalLight("#fff4e2", 1.5);
+sun.position.set(7, 13, 5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.near = 1;
@@ -28,7 +48,23 @@ sun.shadow.camera.left = -20;
 sun.shadow.camera.right = 20;
 sun.shadow.camera.top = 20;
 sun.shadow.camera.bottom = -20;
+sun.shadow.bias = -0.0003;
+sun.shadow.radius = 5;
 scene.add(sun);
+
+const fill = new THREE.DirectionalLight("#dce6ff", 0.5);
+fill.position.set(-8, 6, -4);
+scene.add(fill);
+
+// Plan qui reçoit une ombre de contact douce (sol "propre").
+const shadowPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(120, 120),
+  new THREE.ShadowMaterial({ opacity: 0.18 })
+);
+shadowPlane.rotation.x = -Math.PI / 2;
+shadowPlane.position.y = 0;
+shadowPlane.receiveShadow = true;
+scene.add(shadowPlane);
 
 // --- Caméras ---
 const perspCam = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
@@ -48,12 +84,12 @@ topControls.enabled = false;
 let shellGroup = null;
 let ceilingsGroup = null;
 let furnitureGroup = null;
-let furnitureMeshes = [];
+let furnitureHitboxes = [];
 let grid = null;
 let bounds = null;
 let selectedId = null;
 
-const toggles = { roof: false, grid: true, labels: true };
+const toggles = { roof: false, grid: false, labels: true };
 
 function frameCameras() {
   const size = new THREE.Vector3();
@@ -62,23 +98,33 @@ function frameCameras() {
   bounds.getCenter(center);
   const maxDim = Math.max(size.x, size.z);
 
-  perspControls.target.copy(center);
-  perspCam.position.set(center.x + maxDim * 0.9, maxDim * 1.1, center.z + maxDim * 1.1);
+  // Zone d'affichage utile (le panneau à droite et la barre en haut recouvrent le canvas).
+  const wide = window.innerWidth > 780;
+  const panelPx = wide ? 340 : 0;
+  const topPx = 72;
+  const availW = Math.max(window.innerWidth - panelPx, 200);
+  const availH = Math.max(window.innerHeight - topPx, 200);
+
+  // --- Perspective : cible décalée pour centrer l'appart dans la zone utile ---
+  const offX = (panelPx / window.innerWidth) * maxDim * 0.6;
+  perspControls.target.set(center.x + offX, 0.8, center.z);
+  perspCam.position.set(center.x + offX + maxDim * 0.85, maxDim * 1.05, center.z + maxDim * 1.15);
   perspCam.updateProjectionMatrix();
 
-  const pad = 1.1;
-  const aspect = window.innerWidth / window.innerHeight;
-  let halfW = (size.x / 2) * pad;
-  let halfH = (size.z / 2) * pad;
-  if (halfW / halfH < aspect) halfW = halfH * aspect;
-  else halfH = halfW / aspect;
+  // --- Ortho (plan) : on cadre l'appart dans la zone utile, frustum sur toute la fenêtre ---
+  const pad = 1.12;
+  const scale = Math.max((size.x * pad) / availW, (size.z * pad) / availH);
+  const halfW = (scale * window.innerWidth) / 2;
+  const halfH = (scale * window.innerHeight) / 2;
   orthoCam.left = -halfW; orthoCam.right = halfW;
   orthoCam.top = halfH; orthoCam.bottom = -halfH;
-  orthoCam.position.set(center.x, 30, center.z);
+  const cx = center.x + (panelPx / 2) * scale; // décale le contenu vers la gauche
+  const cz = center.z - (topPx / 2) * scale;
+  orthoCam.position.set(cx, 30, cz);
   orthoCam.up.set(0, 0, -1);
-  orthoCam.lookAt(center.x, 0, center.z);
+  orthoCam.lookAt(cx, 0, cz);
   orthoCam.updateProjectionMatrix();
-  topControls.target.copy(new THREE.Vector3(center.x, 0, center.z));
+  topControls.target.set(cx, 0, cz);
 }
 
 function rebuildShell() {
@@ -95,9 +141,11 @@ function rebuildShell() {
   bounds.getSize(size);
   const center = new THREE.Vector3();
   bounds.getCenter(center);
-  const g = Math.ceil(Math.max(size.x, size.z)) + 4;
-  grid = new THREE.GridHelper(g, g, "#c3c8d0", "#dfe3ea");
-  grid.position.set(center.x, 0, center.z);
+  const g = Math.ceil(Math.max(size.x, size.z)) + 6;
+  grid = new THREE.GridHelper(g, g, "#d3d8e0", "#e6eaf0");
+  grid.material.opacity = 0.5;
+  grid.material.transparent = true;
+  grid.position.set(center.x, 0.001, center.z);
   grid.visible = toggles.grid;
   scene.add(grid);
 }
@@ -106,18 +154,14 @@ function rebuildFurniture() {
   if (furnitureGroup) scene.remove(furnitureGroup);
   const built = buildFurniture(store.get());
   furnitureGroup = built.group;
-  furnitureMeshes = built.meshes;
+  furnitureHitboxes = built.hitboxes;
   scene.add(furnitureGroup);
   setLabelsVisible(furnitureGroup, toggles.labels);
   applySelection();
 }
 
 function applySelection() {
-  furnitureMeshes.forEach((m) => {
-    const on = m.userData.furnitureId === selectedId;
-    m.material.emissive = new THREE.Color(on ? "#3b82f6" : "#000000");
-    m.material.emissiveIntensity = on ? 0.35 : 0;
-  });
+  if (furnitureGroup) highlightFurniture(furnitureGroup, selectedId);
 }
 
 // ---- Déplacement des meubles à la souris ----
@@ -136,7 +180,7 @@ function onPointerDown(e) {
   if (e.button !== 0) return;
   pointerToNDC(e);
   raycaster.setFromCamera(pointer, activeCam);
-  const hits = raycaster.intersectObjects(furnitureMeshes, false);
+  const hits = raycaster.intersectObjects(furnitureHitboxes, false);
   if (!hits.length) return;
 
   const mesh = hits[0].object;
