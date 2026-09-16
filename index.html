@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Appart 3D — Aménagement</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+
+      <!-- Barre d'outils haut -->
+      <header id="toolbar">
+        <div class="brand">🏠 Appart&nbsp;3D</div>
+        <div class="tools">
+          <button id="view-3d" class="active" title="Vue 3D en perspective">3D</button>
+          <button id="view-top" title="Vue plan du dessus">Plan</button>
+          <span class="sep"></span>
+          <button id="toggle-roof" title="Afficher / masquer les plafonds">Plafonds</button>
+          <button id="toggle-grid" title="Afficher / masquer la grille">Grille</button>
+          <button id="toggle-labels" title="Afficher / masquer les étiquettes meubles">Noms</button>
+          <span class="sep"></span>
+          <button id="export-json" title="Télécharger la configuration">⬇︎ Export</button>
+          <button id="import-json" title="Charger une configuration">⬆︎ Import</button>
+          <button id="reset" title="Réinitialiser depuis la configuration d'origine">↺ Reset</button>
+        </div>
+      </header>
+
+      <!-- Panneau latéral -->
+      <aside id="panel">
+        <nav class="tabs">
+          <button data-tab="rooms" class="active">Pièces</button>
+          <button data-tab="furniture">Meubles</button>
+          <button data-tab="shopping">À acheter</button>
+        </nav>
+        <div class="tab-body">
+          <section data-panel="rooms" class="active"></section>
+          <section data-panel="furniture"></section>
+          <section data-panel="shopping"></section>
+        </div>
+      </aside>
+
+      <!-- Info sélection -->
+      <div id="hud">
+        <span id="hud-hint">Clique-glisse un meuble pour le déplacer • molette pour zoomer • clic droit pour tourner la vue</span>
+      </div>
+
+      <input type="file" id="file-input" accept="application/json" hidden />
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
