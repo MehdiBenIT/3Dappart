@@ -14,24 +14,53 @@
     <div id="app">
       <canvas id="scene"></canvas>
 
-      <!-- Barre d'outils haut -->
+      <!-- Barre d'outils haut (slim : marque + utilitaires) -->
       <header id="toolbar">
         <div class="brand">🏠 Appart&nbsp;3D</div>
         <div class="tools">
-          <button id="view-3d" class="active" title="Vue 3D en perspective">3D</button>
-          <button id="view-dessus" title="Vue de dessus en 3D (relief et ombres visibles)">Dessus</button>
-          <button id="view-top" title="Vue plan à plat (comme un plan d'architecte)">Plan</button>
-          <span class="sep"></span>
-          <button id="toggle-xray" title="Rendre les murs transparents pour voir dedans">Voir dedans</button>
+          <button id="toggle-labels" class="active" title="Afficher / masquer les noms des meubles">Noms</button>
           <button id="toggle-roof" title="Afficher / masquer les plafonds">Plafonds</button>
           <button id="toggle-grid" title="Afficher / masquer la grille">Grille</button>
-          <button id="toggle-labels" class="active" title="Afficher / masquer les étiquettes meubles">Noms</button>
           <span class="sep"></span>
           <button id="export-json" title="Télécharger la configuration">⬇︎ Export</button>
           <button id="import-json" title="Charger une configuration">⬆︎ Import</button>
           <button id="reset" title="Réinitialiser depuis la configuration d'origine">↺ Reset</button>
         </div>
       </header>
+
+      <!-- Télécommande : modes (haut-centre) -->
+      <div id="mode-pad" class="rc-cluster">
+        <button class="rnd" id="rc-walls-up" title="Monter les murs">↥</button>
+        <button class="rnd" id="rc-walls-down" title="Baisser les murs">↧</button>
+        <button class="rnd" id="rc-xray" title="Voir dedans (murs transparents)">◎</button>
+        <button class="rnd" id="rc-blinds" title="Baisser / lever les stores">▤</button>
+      </div>
+
+      <!-- Télécommande : rotation (bas-gauche) -->
+      <div id="nav-pad" class="rc-cluster">
+        <button class="rnd" id="rot-up" title="Basculer vers le haut">↑</button>
+        <button class="rnd" id="rot-left" title="Tourner à gauche">←</button>
+        <button class="rnd" id="rot-right" title="Tourner à droite">→</button>
+        <button class="rnd" id="rot-down" title="Basculer vers le bas">↓</button>
+      </div>
+
+      <!-- Télécommande : vues + zoom (bas-droite) -->
+      <div id="side-pad" class="rc-cluster">
+        <button class="rnd active" id="rc-3d" title="Vue 3D">3D</button>
+        <button class="rnd" id="rc-dessus" title="Vue de dessus">▢</button>
+        <button class="rnd" id="rc-plan" title="Vue plan">▦</button>
+        <button class="rnd" id="zoom-in" title="Zoom avant">+</button>
+        <button class="rnd" id="zoom-out" title="Zoom arrière">−</button>
+      </div>
+
+      <!-- Télécommande : focus pièce (bas-centre) -->
+      <div id="focus-pad" class="rc-cluster">
+        <button class="rnd" data-room="chambre" title="Chambre">🛏</button>
+        <button class="rnd" data-room="sejour" title="Salle de vie">🛋</button>
+        <button class="rnd" data-room="sdb" title="Salle de bain">🚿</button>
+        <button class="rnd" data-room="couloir" title="Entrée">🚪</button>
+        <button class="rnd active" id="focus-all" title="Tout l'appartement">🏠</button>
+      </div>
 
       <!-- Panneau latéral -->
       <aside id="panel">

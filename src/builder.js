@@ -30,6 +30,7 @@ const MATS = {
   radiator: new THREE.MeshStandardMaterial({ color: "#faf7fb", roughness: 0.45, metalness: 0.1 }),
   slab: new THREE.MeshStandardMaterial({ color: COLORS.slab, roughness: 0.85 }),
   skirting: new THREE.MeshStandardMaterial({ color: COLORS.skirting, roughness: 0.55 }),
+  blind: new THREE.MeshStandardMaterial({ color: "#4a4360", roughness: 0.7 }),
 };
 
 function sideFrame(room, side) {
@@ -48,7 +49,7 @@ function wallLength(room, side) {
   return side === "N" || side === "S" ? room.width : room.depth;
 }
 
-function wallGeometry(length, height, thickness, openings) {
+function wallShape(length, height, openings) {
   const shape = new THREE.Shape();
   shape.moveTo(0, 0);
   shape.lineTo(length, 0);
@@ -67,10 +68,34 @@ function wallGeometry(length, height, thickness, openings) {
     hole.closePath();
     shape.holes.push(hole);
   }
+  return shape;
+}
 
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: thickness, bevelEnabled: false });
+function wallGeometry(length, height, thickness, openings) {
+  const geo = new THREE.ExtrudeGeometry(wallShape(length, height, openings), {
+    depth: thickness, bevelEnabled: false,
+  });
   geo.computeVertexNormals();
   return geo;
+}
+
+// Doublure intérieure rose (face intérieure du mur), avec les mêmes ouvertures.
+const LINER_EPS = 0.004;
+function addWallLiner(group, room, side, t, H, ops, roomId) {
+  const len = wallLength(room, side);
+  const geo = new THREE.ShapeGeometry(wallShape(len, H, ops));
+  const mat = new THREE.MeshStandardMaterial({ color: COLORS.accent, roughness: 0.92, side: THREE.DoubleSide });
+  const m = new THREE.Mesh(geo, mat);
+  m.receiveShadow = true;
+  m.userData.isWall = true;
+  m.userData.roomId = roomId;
+  switch (side) {
+    case "N": m.rotation.y = 0; m.position.set(room.x, 0, room.z + t / 2 + LINER_EPS); break;
+    case "S": m.rotation.y = 0; m.position.set(room.x, 0, room.z + room.depth - t / 2 - LINER_EPS); break;
+    case "W": m.rotation.y = -Math.PI / 2; m.position.set(room.x + t / 2 + LINER_EPS, 0, room.z); break;
+    case "E": m.rotation.y = -Math.PI / 2; m.position.set(room.x + room.width - t / 2 - LINER_EPS, 0, room.z); break;
+  }
+  group.add(m);
 }
 
 function placeWall(mesh, room, side, t) {
@@ -83,7 +108,8 @@ function placeWall(mesh, room, side, t) {
 }
 
 // Encadrement (menuiserie) autour d'une ouverture : 4 côtés (fenêtre) ou 3 (porte).
-function addOpeningFrame(group, room, side, op, t) {
+// Pour les fenêtres, ajoute aussi un store (masqué par défaut) au groupe `blinds`.
+function addOpeningFrame(group, room, side, op, t, blinds) {
   const fr = sideFrame(room, side);
   const sill = op.type === "window" ? (op.sill ?? 0.9) : 0;
   const cx = fr.sx + fr.dx * (op.offset + op.width / 2);
@@ -108,11 +134,27 @@ function addOpeningFrame(group, room, side, op, t) {
   bar(fw, Hh + 2 * fw, W / 2 + fw / 2, 0);          // droite
   if (op.type === "window") {
     bar(W + 2 * fw, fw, 0, -(Hh / 2 + fw / 2));     // bas (appui)
-    // Vitre + petit meneau central.
     const pane = new THREE.Mesh(new THREE.BoxGeometry(W, Hh, 0.02), MATS.glass);
     sub.add(pane);
     const meneau = new THREE.Mesh(new THREE.BoxGeometry(0.03, Hh, depth * 0.9), MATS.frame);
     sub.add(meneau);
+
+    // Store (baissé), masqué par défaut — activable via le bouton "Stores".
+    if (blinds) {
+      const blind = new THREE.Group();
+      blind.position.set(cx, cy, cz);
+      blind.rotation.y = isVertical(side) ? Math.PI / 2 : 0;
+      const slats = 8;
+      for (let i = 0; i < slats; i++) {
+        const s = new THREE.Mesh(
+          new THREE.BoxGeometry(W - 0.02, Hh / slats - 0.008, 0.02),
+          MATS.blind
+        );
+        s.position.set(0, Hh / 2 - (i + 0.5) * (Hh / slats), 0.015);
+        blind.add(s);
+      }
+      blinds.add(blind);
+    }
   }
   group.add(sub);
 }
@@ -142,15 +184,21 @@ export function setWallsTransparent(shellGroup, on) {
   });
 }
 
-export function buildApartment(apartment) {
+export function buildApartment(apartment, options = {}) {
   const group = new THREE.Group();
   group.name = "shell";
   const t = apartment.wallThickness;
-  const H = apartment.wallHeight;
+  const H = options.wallHeight || apartment.wallHeight;
 
   const ceilings = new THREE.Group();
   ceilings.name = "ceilings";
   ceilings.visible = false;
+
+  const blinds = new THREE.Group();
+  blinds.name = "blinds";
+  blinds.visible = false;
+
+  const lowWalls = H < 1.2; // mode "murs baissés" → on masque menuiseries/radiateurs
 
   const bounds = new THREE.Box3(
     new THREE.Vector3(Infinity, 0, Infinity),
@@ -165,7 +213,6 @@ export function buildApartment(apartment) {
 
     const cx = room.x + room.width / 2;
     const cz = room.z + room.depth / 2;
-    const accent = new Set(room.accentWalls || []);
 
     // --- Socle flottant (effet diorama) ---
     const slab = new THREE.Mesh(
@@ -192,28 +239,32 @@ export function buildApartment(apartment) {
     ceil.position.set(cx, H, cz);
     ceilings.add(ceil);
 
-    // --- Murs + menuiseries ---
+    // --- Murs (lavande dehors + doublure rose dedans) + menuiseries ---
     for (const side of ["N", "S", "E", "W"]) {
       const ops = (room.openings || []).filter((o) => o.side === side);
-      const wmat = makeWallMat();
-      if (accent.has(side)) wmat.color.set(COLORS.accent);
-      const wall = new THREE.Mesh(wallGeometry(wallLength(room, side), H, t, ops), wmat);
+      const wall = new THREE.Mesh(wallGeometry(wallLength(room, side), H, t, ops), makeWallMat());
       wall.castShadow = true;
       wall.receiveShadow = true;
       wall.userData.isWall = true;
+      wall.userData.roomId = room.id;
       placeWall(wall, room, side, t);
       group.add(wall);
+
+      // Doublure intérieure rose (avec les ouvertures).
+      addWallLiner(group, room, side, t, H, ops, room.id);
 
       // Plinthe magenta au pied du mur (côté intérieur).
       addSkirting(group, room, side, t);
 
-      for (const op of ops) {
-        if (op.type !== "opening") addOpeningFrame(group, room, side, op, t);
+      if (!lowWalls) {
+        for (const op of ops) {
+          if (op.type !== "opening") addOpeningFrame(group, room, side, op, t, blinds);
+        }
       }
     }
 
     // --- Radiateurs (panneau + fines nervures) ---
-    for (const rad of room.radiators || []) {
+    for (const rad of (lowWalls ? [] : room.radiators || [])) {
       const fr = sideFrame(room, rad.side);
       const cx = fr.sx + fr.dx * (rad.offset + rad.width / 2) + fr.inx * (t / 2 + 0.06);
       const cz = fr.sz + fr.dz * (rad.offset + rad.width / 2) + fr.inz * (t / 2 + 0.06);
@@ -228,7 +279,21 @@ export function buildApartment(apartment) {
   }
 
   group.add(ceilings);
+  group.add(blinds);
   bounds.min.y = 0;
   bounds.max.y = H;
-  return { group, ceilings, bounds };
+  return { group, ceilings, blinds, bounds };
+}
+
+// Focalise une pièce : les murs des autres pièces deviennent translucides.
+export function setFocusRoom(shellGroup, roomId) {
+  if (!shellGroup) return;
+  shellGroup.traverse((o) => {
+    if (o.userData && o.userData.isWall && o.material) {
+      const dim = roomId && o.userData.roomId !== roomId;
+      o.material.transparent = dim;
+      o.material.opacity = dim ? 0.12 : 1;
+      o.material.depthWrite = !dim;
+    }
+  });
 }

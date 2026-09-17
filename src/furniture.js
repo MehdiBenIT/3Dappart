@@ -37,6 +37,30 @@ function shade(hex, f) {
   return "#" + c.getHexString();
 }
 
+// Texture de tapis : anneaux concentriques (motif discret).
+function rugTexture(col) {
+  const s = 256;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = s;
+  const ctx = cv.getContext("2d");
+  ctx.fillStyle = col;
+  ctx.fillRect(0, 0, s, s);
+  ctx.strokeStyle = shade(col, -0.14);
+  ctx.lineWidth = 5;
+  for (let r = 18; r < s / 2; r += 20) {
+    ctx.beginPath();
+    ctx.arc(s / 2, s / 2, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = shade(col, 0.12);
+  ctx.lineWidth = 6;
+  ctx.strokeRect(8, 8, s - 16, s - 16);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  return tex;
+}
+
 /* --------- Constructeurs par type. Renvoient un tableau de meshes. --------- */
 
 const builders = {
@@ -76,14 +100,19 @@ const builders = {
     return parts;
   },
 
+  // Chaise de bureau / gaming : assise, dossier haut, colonne, pied étoile + roulettes.
   chair(w, d, h, col) {
     const parts = [];
-    const seatH = 0.45;
-    parts.push(at(rb(w, 0.06, d, col, { radius: 0.02 }), 0, seatH, 0));                  // assise
-    parts.push(at(rb(w, h - seatH, 0.06, col, { radius: 0.02 }), 0, seatH + (h - seatH) / 2, d / 2 - 0.03)); // dossier
-    for (const sx of [-1, 1]) for (const sz of [-1, 1])
-      parts.push(at(rb(0.05, seatH, 0.05, shade(col, -0.1)),
-        sx * (w / 2 - 0.05), seatH / 2, sz * (d / 2 - 0.05)));                           // pieds
+    const seatH = 0.48;
+    parts.push(at(rb(w, 0.09, d, col, { radius: 0.04 }), 0, seatH, 0));                  // assise
+    parts.push(at(rb(w, Math.max(h - seatH, 0.4), 0.08, col, { radius: 0.05 }),
+      0, seatH + Math.max(h - seatH, 0.4) / 2, d / 2 - 0.05));                           // dossier haut
+    parts.push(at(rb(0.06, seatH - 0.14, 0.06, "#2a2a2e"), 0, (seatH - 0.14) / 2 + 0.08, 0)); // colonne
+    parts.push(at(rb(w * 0.95, 0.05, 0.07, "#2a2a2e", { radius: 0.02 }), 0, 0.07, 0));   // pied étoile
+    parts.push(at(rb(0.07, 0.05, d * 0.95, "#2a2a2e", { radius: 0.02 }), 0, 0.07, 0));
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]])
+      parts.push(at(rb(0.07, 0.07, 0.07, "#141416", { radius: 0.035 }),
+        sx * w * 0.42, 0.035, sz * d * 0.42));                                           // roulettes
     return parts;
   },
 
@@ -115,10 +144,40 @@ const builders = {
   },
 
   dresser(w, d, h, col) { return drawers(w, d, h, col, 3); },
+  // Étagère type casiers : grille de cases ouvertes (façon caisses empilées).
   storage(w, d, h, col) {
-    const parts = [at(rb(w, h, d, col, { radius: 0.02 }), 0, h / 2, 0)];
-    for (const y of [0.25, 0.5, 0.75])
-      parts.push(at(rb(0.03, 0.12, 0.03, shade(col, -0.15)), w / 2 - 0.06, h * y, d / 2 - 0.02));
+    const parts = [];
+    const rows = Math.max(2, Math.round(h / 0.42));
+    const th = 0.04;
+    // Montants + haut/bas.
+    parts.push(at(rb(w, th, d, col, { radius: 0.01 }), 0, th / 2, 0));
+    parts.push(at(rb(w, th, d, col, { radius: 0.01 }), 0, h - th / 2, 0));
+    parts.push(at(rb(th, h, d, col, { radius: 0.01 }), -w / 2 + th / 2, h / 2, 0));
+    parts.push(at(rb(th, h, d, col, { radius: 0.01 }), w / 2 - th / 2, h / 2, 0));
+    parts.push(at(rb(th, h, d, col, { radius: 0.01 }), 0, h / 2, 0)); // séparation verticale
+    for (let i = 1; i < rows; i++)
+      parts.push(at(rb(w, th, d, col, { radius: 0.01 }), 0, (h * i) / rows, 0)); // tablettes
+    // Fond léger pour donner du corps.
+    parts.push(at(rb(w - th, h - th, 0.02, shade(col, -0.12)), 0, h / 2, -d / 2 + 0.02));
+    return parts;
+  },
+  // Tapis : plan fin avec motif concentrique.
+  rug(w, d, h, col) {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(w, d),
+      new THREE.MeshStandardMaterial({ map: rugTexture(col), roughness: 0.98 })
+    );
+    m.rotation.x = -Math.PI / 2;
+    m.position.y = 0.006;
+    m.receiveShadow = true;
+    return [m];
+  },
+  // Lampadaire : base, pied, abat-jour.
+  lamp(w, d, h, col) {
+    const parts = [];
+    parts.push(at(rb(0.3, 0.03, 0.3, "#2a2a2e", { radius: 0.02 }), 0, 0.015, 0));         // base
+    parts.push(at(rb(0.04, h - 0.28, 0.04, "#2a2a2e"), 0, (h - 0.28) / 2, 0));            // pied
+    parts.push(at(rb(0.34, 0.24, 0.34, col, { rough: 0.9, radius: 0.06 }), 0, h - 0.12, 0)); // abat-jour
     return parts;
   },
 

@@ -140,7 +140,13 @@ export const apartment = {
     { id: "plan-cuisine", name: "Plan cuisine", type: "counter", room: "sejour",
       x: 4.7, z: 5.0, w: 2.0, d: 0.6, h: 0.9, rotation: 0, color: "#b98d5e" },
     { id: "rangement", name: "Rangement", type: "storage", room: "sejour",
-      x: 3.4, z: 3.5, w: 0.9, d: 0.6, h: 2.0, rotation: 90, color: "#26262b" },
+      x: 3.4, z: 3.5, w: 0.9, d: 0.6, h: 2.0, rotation: 90, color: "#c0392b" },
+
+    // Déco salon
+    { id: "tapis", name: "Tapis", type: "rug", room: "sejour",
+      x: 5.0, z: 3.1, w: 1.9, d: 1.5, h: 0.02, rotation: 0, color: "#d9c7cf" },
+    { id: "lampe", name: "Lampadaire", type: "lamp", room: "sejour",
+      x: 6.6, z: 1.4, w: 0.34, d: 0.34, h: 1.55, rotation: 0, color: "#f3ece0" },
   ],
 
   // Idées / achats par pièce (synchronisables avec TickTick).

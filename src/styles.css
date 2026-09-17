@@ -123,8 +123,46 @@ select option { color: #111; }
 }
 #placeholder-banner b { color: #fff; }
 
-@media (max-width: 780px) {
+/* ---- Télécommande : boutons ronds ---- */
+.rc-cluster { position: absolute; z-index: 6; display: flex; gap: 9px; }
+.rnd {
+  width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 600; line-height: 1;
+  border: 1px solid var(--line);
+  background: rgba(42, 31, 62, 0.82); color: var(--ink);
+  backdrop-filter: blur(8px); box-shadow: var(--shadow);
+  cursor: pointer; transition: background .15s, transform .05s, color .15s, border-color .15s;
+}
+.rnd:hover { background: rgba(64, 48, 90, 0.92); }
+.rnd:active { transform: translateY(1px); }
+.rnd.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+#mode-pad { top: 74px; left: calc((100% - 336px) / 2); transform: translateX(-50%); }
+#focus-pad { bottom: 14px; left: calc((100% - 336px) / 2); transform: translateX(-50%); }
+#side-pad { right: 336px; bottom: 14px; flex-direction: column; }
+
+#nav-pad {
+  left: 14px; bottom: 14px; display: grid; gap: 6px;
+  grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(3, 46px);
+}
+#nav-pad .rnd { width: 46px; height: 46px; }
+#rot-up { grid-column: 2; grid-row: 1; }
+#rot-left { grid-column: 1; grid-row: 2; }
+#rot-right { grid-column: 3; grid-row: 2; }
+#rot-down { grid-column: 2; grid-row: 3; }
+
+#hud {
+  position: absolute; left: 50%; transform: translateX(-50%); top: 12px; bottom: auto; z-index: 4;
+  background: rgba(15, 10, 25, 0.6); color: #e9e0f5;
+  padding: 6px 12px; border-radius: 10px; font-size: 12px; max-width: 46%;
+  border: 1px solid var(--line); backdrop-filter: blur(6px); display: none;
+}
+
+@media (max-width: 900px) {
   #toolbar { right: 12px; }
-  #panel { top: auto; bottom: 12px; left: 12px; width: auto; max-height: 42%; }
-  #hud { display: none; }
+  #panel { top: auto; bottom: 84px; left: 12px; right: 12px; width: auto; max-height: 38%; }
+  #mode-pad, #focus-pad { left: 50%; }
+  #side-pad { right: 12px; }
+  #placeholder-banner { display: none; }
 }

@@ -6,7 +6,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { store } from "./store.js";
-import { buildApartment, setWallsTransparent } from "./builder.js";
+import { buildApartment, setWallsTransparent, setFocusRoom } from "./builder.js";
 import { buildFurniture, setLabelsVisible, highlightFurniture } from "./furniture.js";
 import { initUI } from "./ui.js";
 import { IS_PLACEHOLDER } from "./apartment.js";
@@ -100,8 +100,11 @@ let bounds = null;
 let selectedId = null;
 let renderPass = null;
 let gtaoPass = null;
+let blindsGroup = null;
+let wallHeightOverride = null;   // null = pleine hauteur, sinon murs baissés
+let focusRoomId = null;
 
-const toggles = { roof: false, grid: false, labels: true, xray: false };
+const toggles = { roof: false, grid: false, labels: true, xray: false, blinds: false };
 
 function frameCameras() {
   const size = new THREE.Vector3();
@@ -142,12 +145,15 @@ function frameCameras() {
 
 function rebuildShell() {
   if (shellGroup) scene.remove(shellGroup);
-  const built = buildApartment(store.get());
+  const built = buildApartment(store.get(), { wallHeight: wallHeightOverride });
   shellGroup = built.group;
   ceilingsGroup = built.ceilings;
   ceilingsGroup.visible = toggles.roof;
+  blindsGroup = built.blinds;
+  blindsGroup.visible = toggles.blinds;
   bounds = built.bounds;
-  setWallsTransparent(shellGroup, toggles.xray);
+  if (toggles.xray) setWallsTransparent(shellGroup, true);
+  if (focusRoomId) setFocusRoom(shellGroup, focusRoomId);
   scene.add(shellGroup);
 
   if (grid) scene.remove(grid);
@@ -260,6 +266,11 @@ function setPerspTop() {
   perspCam.updateProjectionMatrix();
 }
 
+// Helpers DOM (tolérants aux boutons absents).
+const $ = (id) => document.getElementById(id);
+const bind = (id, fn) => { const el = $(id); if (el) el.addEventListener("click", fn); };
+const setActive = (id, on) => { const el = $(id); if (el) el.classList.toggle("active", on); };
+
 function setView(mode) {
   currentView = mode;
   const usePersp = mode !== "plan";
@@ -272,56 +283,123 @@ function setView(mode) {
   if (mode === "dessus") setPerspTop();
   else if (mode === "3d") frameCameras();
 
-  document.getElementById("view-3d").classList.toggle("active", mode === "3d");
-  document.getElementById("view-dessus").classList.toggle("active", mode === "dessus");
-  document.getElementById("view-top").classList.toggle("active", mode === "plan");
-
+  for (const m of ["3d", "dessus", "plan"]) {
+    setActive("view-" + m, m === mode);
+    setActive("rc-" + m, m === mode);
+  }
   const hints = {
-    "3d": "Clique-glisse un meuble pour le déplacer • molette pour zoomer • clic droit pour tourner la vue",
-    dessus: "Vue de dessus 3D • clique-glisse un meuble pour le déplacer • molette pour zoomer",
-    plan: "Vue plan • clique-glisse un meuble pour le positionner au centimètre • molette pour zoomer",
+    "3d": "Clic-glisse un meuble • molette pour zoomer • clic droit pour tourner la vue",
+    dessus: "Vue de dessus 3D • clic-glisse un meuble • molette pour zoomer",
+    plan: "Vue plan • clic-glisse un meuble pour le positionner au centimètre",
   };
-  document.getElementById("hud-hint").textContent = hints[mode];
+  if ($("hud-hint")) $("hud-hint").textContent = hints[mode];
 }
 
-// ---- Toolbar ----
-document.getElementById("view-3d").addEventListener("click", () => setView("3d"));
-document.getElementById("view-dessus").addEventListener("click", () => setView("dessus"));
-document.getElementById("view-top").addEventListener("click", () => setView("plan"));
-document.getElementById("toggle-roof").addEventListener("click", (e) => {
-  toggles.roof = !toggles.roof;
-  if (ceilingsGroup) ceilingsGroup.visible = toggles.roof;
-  e.currentTarget.classList.toggle("active", toggles.roof);
-});
-document.getElementById("toggle-grid").addEventListener("click", (e) => {
-  toggles.grid = !toggles.grid;
-  if (grid) grid.visible = toggles.grid;
-  e.currentTarget.classList.toggle("active", toggles.grid);
-});
-document.getElementById("toggle-xray").addEventListener("click", (e) => {
+// ---- Actions ----
+function toggleRoof() { toggles.roof = !toggles.roof; if (ceilingsGroup) ceilingsGroup.visible = toggles.roof; setActive("toggle-roof", toggles.roof); }
+function toggleGrid() { toggles.grid = !toggles.grid; if (grid) grid.visible = toggles.grid; setActive("toggle-grid", toggles.grid); }
+function toggleLabels() { toggles.labels = !toggles.labels; setLabelsVisible(furnitureGroup, toggles.labels); setActive("toggle-labels", toggles.labels); setActive("rc-labels", toggles.labels); }
+function toggleXray() {
   toggles.xray = !toggles.xray;
   setWallsTransparent(shellGroup, toggles.xray);
-  e.currentTarget.classList.toggle("active", toggles.xray);
-});
-document.getElementById("toggle-labels").addEventListener("click", (e) => {
-  toggles.labels = !toggles.labels;
-  setLabelsVisible(furnitureGroup, toggles.labels);
-  e.currentTarget.classList.toggle("active", toggles.labels);
-});
-document.getElementById("export-json").addEventListener("click", () => store.exportJSON());
-document.getElementById("reset").addEventListener("click", () => {
+  setActive("toggle-xray", toggles.xray); setActive("rc-xray", toggles.xray);
+}
+function toggleBlinds() {
+  toggles.blinds = !toggles.blinds;
+  if (blindsGroup) blindsGroup.visible = toggles.blinds;
+  setActive("rc-blinds", toggles.blinds);
+}
+function setWallsLow(low) {
+  wallHeightOverride = low ? 0.4 : null;
+  rebuildShell();
+  rebuildFurniture();
+  if (currentView === "dessus") setPerspTop(); else if (currentView === "3d") frameCameras();
+  setActive("rc-walls-up", !low);
+  setActive("rc-walls-down", low);
+}
+function focusRoom(roomId) {
+  focusRoomId = roomId;
+  if (currentView === "plan") setView("3d");
+  setFocusRoom(shellGroup, roomId);
+  const r = store.get().rooms.find((x) => x.id === roomId);
+  if (r) {
+    const cx = r.x + r.width / 2, cz = r.z + r.depth / 2;
+    perspControls.target.set(cx, 0.8, cz);
+    const d = Math.max(r.width, r.depth) * 2.4 + 2;
+    perspCam.position.set(cx + d * 0.55, d * 0.9, cz + d * 0.95);
+  }
+  document.querySelectorAll("#focus-pad .rnd").forEach((b) =>
+    b.classList.toggle("active", b.dataset.room === roomId));
+  setActive("focus-all", false);
+}
+function clearFocus() {
+  focusRoomId = null;
+  setFocusRoom(shellGroup, null);
+  frameCameras();
+  document.querySelectorAll("#focus-pad .rnd").forEach((b) => b.classList.remove("active"));
+  setActive("focus-all", true);
+}
+function rotateView(dAz, dPol) {
+  if (activeCam !== perspCam) setView("3d");
+  const t = perspControls.target;
+  const off = perspCam.position.clone().sub(t);
+  const sph = new THREE.Spherical().setFromVector3(off);
+  sph.theta += dAz;
+  sph.phi = Math.max(0.15, Math.min(Math.PI / 2 - 0.04, sph.phi + dPol));
+  off.setFromSpherical(sph);
+  perspCam.position.copy(t).add(off);
+}
+function zoomView(inward) {
+  if (activeCam === orthoCam) {
+    orthoCam.zoom = Math.max(0.2, Math.min(5, orthoCam.zoom * (inward ? 1.18 : 1 / 1.18)));
+    orthoCam.updateProjectionMatrix();
+  } else {
+    const t = perspControls.target;
+    const off = perspCam.position.clone().sub(t).multiplyScalar(inward ? 1 / 1.18 : 1.18);
+    perspCam.position.copy(t).add(off);
+  }
+}
+
+// ---- Câblage (barre du haut + télécommande ronde) ----
+bind("view-3d", () => setView("3d"));
+bind("view-dessus", () => setView("dessus"));
+bind("view-top", () => setView("plan"));
+bind("rc-3d", () => setView("3d"));
+bind("rc-dessus", () => setView("dessus"));
+bind("rc-plan", () => setView("plan"));
+
+bind("toggle-roof", toggleRoof);
+bind("toggle-grid", toggleGrid);
+bind("toggle-labels", toggleLabels);
+bind("rc-labels", toggleLabels);
+bind("toggle-xray", toggleXray);
+bind("rc-xray", toggleXray);
+bind("rc-blinds", toggleBlinds);
+bind("rc-walls-up", () => setWallsLow(false));
+bind("rc-walls-down", () => setWallsLow(true));
+
+bind("rot-left", () => rotateView(Math.PI / 12, 0));
+bind("rot-right", () => rotateView(-Math.PI / 12, 0));
+bind("rot-up", () => rotateView(0, -Math.PI / 18));
+bind("rot-down", () => rotateView(0, Math.PI / 18));
+bind("zoom-in", () => zoomView(true));
+bind("zoom-out", () => zoomView(false));
+
+bind("focus-all", clearFocus);
+document.querySelectorAll("#focus-pad .rnd[data-room]").forEach((b) =>
+  b.addEventListener("click", () => focusRoom(b.dataset.room)));
+
+bind("export-json", () => store.exportJSON());
+bind("reset", () => {
   if (confirm("Réinitialiser depuis la configuration d'origine ? Tes modifications seront perdues.")) store.reset();
 });
-const fileInput = document.getElementById("file-input");
-document.getElementById("import-json").addEventListener("click", () => fileInput.click());
-fileInput.addEventListener("change", async () => {
+const fileInput = $("file-input");
+bind("import-json", () => fileInput.click());
+if (fileInput) fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
   if (!file) return;
-  try {
-    store.importJSON(await file.text());
-  } catch (err) {
-    alert("Import impossible : " + err.message);
-  }
+  try { store.importJSON(await file.text()); }
+  catch (err) { alert("Import impossible : " + err.message); }
   fileInput.value = "";
 });
 
@@ -331,15 +409,7 @@ const ui = initUI({
     selectedId = id;
     applySelection();
   },
-  onFocusRoom: (roomId) => {
-    const r = store.get().rooms.find((x) => x.id === roomId);
-    if (!r) return;
-    const cx = r.x + r.width / 2;
-    const cz = r.z + r.depth / 2;
-    perspControls.target.set(cx, 1, cz);
-    const d = Math.max(r.width, r.depth) * 1.6 + 2;
-    perspCam.position.set(cx + d * 0.6, d, cz + d * 0.6);
-  },
+  onFocusRoom: (roomId) => focusRoom(roomId),
 });
 
 // ---- Réaction aux changements du store ----
@@ -360,8 +430,7 @@ setView("3d");
 if (IS_PLACEHOLDER) {
   const banner = document.createElement("div");
   banner.id = "placeholder-banner";
-  banner.innerHTML =
-    "⚠️ Dimensions <b>approximatives</b> (d'après les croquis). À ajuster avec les vraies mesures.";
+  banner.innerHTML = "⚠️ Dimensions <b>approximatives</b> (croquis)";
   document.getElementById("app").appendChild(banner);
 }
 
