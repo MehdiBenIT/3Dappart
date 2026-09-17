@@ -110,7 +110,7 @@ const builders = {
 
   counter(w, d, h, col) {
     const parts = [at(rb(w, h - 0.04, d, col, { radius: 0.01 }), 0, (h - 0.04) / 2, 0)]; // caisson
-    parts.push(at(rb(w + 0.02, 0.04, d + 0.02, "#3b3f45", { rough: 0.4, radius: 0.01 }), 0, h - 0.02, 0)); // plan
+    parts.push(at(rb(w + 0.02, 0.04, d + 0.02, "#cdc9c0", { rough: 0.35, radius: 0.01 }), 0, h - 0.02, 0)); // plan
     return parts;
   },
 
@@ -165,23 +165,29 @@ function drawers(w, d, h, col, n) {
 function makeLabel(text) {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d");
-  const pad = 18;
-  ctx.font = "600 42px Inter, system-ui, sans-serif";
+  const scaleUp = 2; // netteté
+  const pad = 20 * scaleUp;
+  const fs = 34 * scaleUp;
+  ctx.font = `500 ${fs}px Inter, system-ui, sans-serif`;
   canvas.width = ctx.measureText(text).width + pad * 2;
-  canvas.height = 66;
-  ctx.font = "600 42px Inter, system-ui, sans-serif";
-  ctx.fillStyle = "rgba(24,26,32,0.78)";
-  const r = 16;
+  canvas.height = 58 * scaleUp;
+  ctx.font = `500 ${fs}px Inter, system-ui, sans-serif`;
+  // Pastille claire, discrète, avec fine bordure.
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.strokeStyle = "rgba(30,35,45,0.12)";
+  ctx.lineWidth = 2 * scaleUp;
+  const r = 14 * scaleUp;
   ctx.beginPath();
-  ctx.roundRect(0, 0, canvas.width, canvas.height, r);
+  ctx.roundRect(ctx.lineWidth, ctx.lineWidth, canvas.width - 2 * ctx.lineWidth, canvas.height - 2 * ctx.lineWidth, r);
   ctx.fill();
-  ctx.fillStyle = "#fff";
+  ctx.stroke();
+  ctx.fillStyle = "#3a3f4a";
   ctx.textBaseline = "middle";
-  ctx.fillText(text, pad, canvas.height / 2 + 2);
+  ctx.fillText(text, pad, canvas.height / 2 + 1 * scaleUp);
   const tex = new THREE.CanvasTexture(canvas);
-  tex.anisotropy = 4;
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
-  sprite.scale.set(canvas.width * 0.003, canvas.height * 0.003, 1);
+  tex.anisotropy = 8;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true, opacity: 0.96 }));
+  sprite.scale.set((canvas.width / scaleUp) * 0.0026, (canvas.height / scaleUp) * 0.0026, 1);
   sprite.name = "label";
   return sprite;
 }

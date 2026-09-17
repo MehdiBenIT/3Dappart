@@ -1,5 +1,10 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
+import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { store } from "./store.js";
 import { buildApartment } from "./builder.js";
 import { buildFurniture, setLabelsVisible, highlightFurniture } from "./furniture.js";
@@ -12,7 +17,7 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
+renderer.toneMappingExposure = 0.97;
 
 const scene = new THREE.Scene();
 
@@ -33,13 +38,17 @@ function gradientBackground() {
 }
 scene.background = gradientBackground();
 
-// --- Lumières (clé + remplissage + ambiance ciel/sol) ---
-const hemi = new THREE.HemisphereLight("#ffffff", "#c3bfb4", 0.75);
-scene.add(hemi);
-scene.add(new THREE.AmbientLight("#ffffff", 0.25));
+// --- Éclairage image-based (IBL) : lumière douce et réaliste ---
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.45;
 
-const sun = new THREE.DirectionalLight("#fff4e2", 1.5);
-sun.position.set(7, 13, 5);
+// --- Lumières d'appoint (le soleil porte les ombres) ---
+const hemi = new THREE.HemisphereLight("#ffffff", "#cdc8bd", 0.22);
+scene.add(hemi);
+
+const sun = new THREE.DirectionalLight("#fff6ea", 1.7);
+sun.position.set(7, 14, 5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 sun.shadow.camera.near = 1;
@@ -49,11 +58,12 @@ sun.shadow.camera.right = 20;
 sun.shadow.camera.top = 20;
 sun.shadow.camera.bottom = -20;
 sun.shadow.bias = -0.0003;
-sun.shadow.radius = 5;
+sun.shadow.normalBias = 0.02;
+sun.shadow.radius = 6;
 scene.add(sun);
 
-const fill = new THREE.DirectionalLight("#dce6ff", 0.5);
-fill.position.set(-8, 6, -4);
+const fill = new THREE.DirectionalLight("#e6ecff", 0.28);
+fill.position.set(-9, 7, -5);
 scene.add(fill);
 
 // Plan qui reçoit une ombre de contact douce (sol "propre").
@@ -88,6 +98,8 @@ let furnitureHitboxes = [];
 let grid = null;
 let bounds = null;
 let selectedId = null;
+let renderPass = null;
+let gtaoPass = null;
 
 const toggles = { roof: false, grid: false, labels: true };
 
@@ -232,6 +244,8 @@ window.addEventListener("pointerup", onPointerUp);
 function setView(mode) {
   const is3D = mode === "3d";
   activeCam = is3D ? perspCam : orthoCam;
+  if (renderPass) renderPass.camera = activeCam;
+  if (gtaoPass) gtaoPass.camera = activeCam;
   perspControls.enabled = is3D;
   topControls.enabled = !is3D;
   document.getElementById("view-3d").classList.toggle("active", is3D);
@@ -316,10 +330,25 @@ if (IS_PLACEHOLDER) {
   document.getElementById("app").appendChild(banner);
 }
 
+// ---- Post-processing : occlusion ambiante douce (GTAO) + sortie tonemappée ----
+const composer = new EffectComposer(renderer);
+renderPass = new RenderPass(scene, activeCam);
+gtaoPass = new GTAOPass(scene, activeCam, window.innerWidth, window.innerHeight);
+gtaoPass.output = GTAOPass.OUTPUT.Default;
+gtaoPass.updateGtaoMaterial({
+  radius: 0.5, distanceExponent: 1, thickness: 1, scale: 1,
+  samples: 16, distanceFallOff: 1, screenSpaceRadius: false,
+});
+composer.addPass(renderPass);
+composer.addPass(gtaoPass);
+composer.addPass(new OutputPass());
+
 // ---- Boucle de rendu ----
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   renderer.setSize(w, h);
+  composer.setSize(w, h);
+  gtaoPass.setSize(w, h);
   perspCam.aspect = w / h;
   perspCam.updateProjectionMatrix();
   if (bounds) frameCameras();
@@ -331,6 +360,6 @@ function animate() {
   requestAnimationFrame(animate);
   perspControls.update();
   topControls.update();
-  renderer.render(scene, activeCam);
+  composer.render();
 }
 animate();
