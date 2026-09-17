@@ -124,8 +124,13 @@ export function initUI({ onSelectFurniture, onFocusRoom } = {}) {
     const s = store.get();
     const host = el('[data-panel="shopping"]');
     host.innerHTML = "";
+    const prioRank = { high: 0, med: 1, low: 2 };
+    const prioDot = { high: "🔴", med: "🟠", low: "🟡" };
+
     s.rooms.forEach((r) => {
-      const items = s.shopping.filter((x) => x.room === r.id);
+      const items = s.shopping
+        .filter((x) => x.room === r.id)
+        .sort((a, b) => (prioRank[a.priority] ?? 3) - (prioRank[b.priority] ?? 3));
       if (!items.length) return;
       const block = document.createElement("div");
       block.className = "shop-block";
@@ -135,8 +140,12 @@ export function initUI({ onSelectFurniture, onFocusRoom } = {}) {
         line.className = "shop-item" + (it.done ? " done" : "");
         line.innerHTML = `
           <input type="checkbox" ${it.done ? "checked" : ""}>
-          <span class="grow">${it.label}</span>
-          <button class="icon del">✕</button>`;
+          <span class="dot" title="Priorité">${prioDot[it.priority] || "⚪️"}</span>
+          <div class="grow">
+            <div class="lbl">${it.label}</div>
+            ${it.note ? `<div class="note">${it.note}</div>` : ""}
+          </div>
+          <button class="icon del" title="Supprimer">✕</button>`;
         line.querySelector("input").addEventListener("change", (e) =>
           store.updateShopping(it.id, { done: e.target.checked })
         );
@@ -146,19 +155,46 @@ export function initUI({ onSelectFurniture, onFocusRoom } = {}) {
       host.appendChild(block);
     });
 
+    const done = s.shopping.filter((x) => x.done).length;
+    const tally = document.createElement("p");
+    tally.className = "muted";
+    tally.textContent = `${s.shopping.length} idées · ${done} acheté(s)`;
+    host.appendChild(tally);
+
     const add = document.createElement("div");
     add.className = "add-form";
     add.innerHTML = `
       <h4>Ajouter une idée / un achat</h4>
       <select id="ns-room">${s.rooms.map((r) => `<option value="${r.id}">${r.name}</option>`).join("")}</select>
       <input id="ns-label" placeholder="Ex : Étagère murale, lampe...">
+      <select id="ns-prio">
+        <option value="high">🔴 Priorité haute</option>
+        <option value="med" selected>🟠 Priorité moyenne</option>
+        <option value="low">🟡 Priorité basse</option>
+      </select>
       <button id="ns-add" class="primary">+ Ajouter</button>
-      <p class="muted">💡 Ces éléments peuvent être poussés vers TickTick — demande-le à Claude.</p>`;
+      <button id="ns-copy">📋 Copier la liste (TickTick)</button>
+      <p class="muted">💡 Dis à Claude « synchronise avec TickTick » pour tout envoyer d'un coup.</p>`;
     host.appendChild(add);
     add.querySelector("#ns-add").addEventListener("click", () => {
       const label = el("#ns-label").value.trim();
       if (!label) return;
-      store.addShopping({ id: "s" + uid(), room: el("#ns-room").value, label, note: "", done: false });
+      store.addShopping({ id: "s" + uid(), room: el("#ns-room").value, label,
+        priority: el("#ns-prio").value, note: "", done: false });
+    });
+    add.querySelector("#ns-copy").addEventListener("click", () => {
+      const lines = [];
+      s.rooms.forEach((r) => {
+        const items = s.shopping.filter((x) => x.room === r.id);
+        if (!items.length) return;
+        lines.push(`# ${r.name}`);
+        items.forEach((it) => lines.push(`- [${it.done ? "x" : " "}] ${it.label}${it.note ? " — " + it.note : ""}`));
+        lines.push("");
+      });
+      navigator.clipboard?.writeText(lines.join("\n")).then(
+        () => { const b = add.querySelector("#ns-copy"); b.textContent = "✅ Copié !"; setTimeout(() => b.textContent = "📋 Copier la liste (TickTick)", 1500); },
+        () => alert("Copie impossible sur ce navigateur.")
+      );
     });
   }
 

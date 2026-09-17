@@ -150,9 +150,50 @@ export const apartment = {
   ],
 
   // Idées / achats par pièce (synchronisables avec TickTick).
+  // priority : "high" | "med" | "low"
   shopping: [
-    { id: "s1", room: "sejour", label: "Étagères murales (gain de place)", note: "", done: false },
-    { id: "s2", room: "chambre", label: "Tête de lit avec rangement", note: "", done: false },
-    { id: "s3", room: "couloir", label: "Meuble d'entrée compact + miroir", note: "", done: false },
+    // 🧺 Gestion du linge (lavé → séché → rangé)
+    { id: "s1", room: "chambre", priority: "high", done: false,
+      label: "Bac à linge propre pliable",
+      note: "Remplace les sacs Ikea qui traînent : UN seul contenant dédié au linge propre en attente de pliage. Se plie quand il est vide." },
+    { id: "s2", room: "chambre", priority: "med", done: false,
+      label: "Valet de chambre (repose-vêtements)",
+      note: "Pour poser les vêtements portés une fois / à plier, au lieu de les entasser sur le côté." },
+    { id: "s3", room: "chambre", priority: "med", done: false,
+      label: "Défroisseur vapeur à main",
+      note: "Remplace fer + planche (encombrants) : défroisse directement sur cintre. Gain de place." },
+    { id: "s4", room: "chambre", priority: "med", done: false,
+      label: "Lit avec coffre de rangement",
+      note: "Range couettes, linge de saison, valises → libère de la place ailleurs." },
+
+    // 🚪 Salle de bain — espace mort derrière la porte
+    { id: "s5", room: "sdb", priority: "high", done: false,
+      label: "Patère / crochets derrière la porte",
+      note: "Solution pas chère pour exploiter l'espace mort entre la porte ouverte et le mur (serviettes, peignoir)." },
+    { id: "s6", room: "sdb", priority: "low", done: false,
+      label: "Porte coulissante ou pliante (à étudier)",
+      note: "Projet plus tard : supprime le débattement de la porte et libère le passage à l'entrée de la SdB." },
+    { id: "s7", room: "sdb", priority: "med", done: false,
+      label: "Étagère d'angle fine",
+      note: "Rangement vertical pour produits, sans empiéter sur le passage." },
+
+    // 🛋️ Salle de vie — rangement vertical
+    { id: "s8", room: "sejour", priority: "med", done: false,
+      label: "Étagères murales au-dessus du bureau",
+      note: "Range en hauteur, libère le plan de travail et le sol." },
+    { id: "s9", room: "sejour", priority: "low", done: false,
+      label: "Paniers / boîtes déco de rangement",
+      note: "Cachent le bazar tout en restant dans le style épuré." },
+
+    // 🚪 Entrée / couloir
+    { id: "s10", room: "couloir", priority: "high", done: false,
+      label: "Patères murales (manteaux)",
+      note: "Pas cher, gain immédiat : plus de manteaux qui traînent." },
+    { id: "s11", room: "couloir", priority: "med", done: false,
+      label: "Meuble d'entrée compact (banc + chaussures)",
+      note: "Range les chaussures et sert d'assise pour se chausser." },
+    { id: "s12", room: "couloir", priority: "low", done: false,
+      label: "Miroir d'entrée",
+      note: "Agrandit visuellement le couloir et pratique avant de sortir." },
   ],
 };
