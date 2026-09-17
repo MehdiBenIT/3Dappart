@@ -6,7 +6,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { store } from "./store.js";
-import { buildApartment } from "./builder.js";
+import { buildApartment, setWallsTransparent } from "./builder.js";
 import { buildFurniture, setLabelsVisible, highlightFurniture } from "./furniture.js";
 import { initUI } from "./ui.js";
 import { IS_PLACEHOLDER } from "./apartment.js";
@@ -21,15 +21,15 @@ renderer.toneMappingExposure = 0.97;
 
 const scene = new THREE.Scene();
 
-// Fond en dégradé doux.
+// Fond en dégradé nocturne (prune → violet sombre).
 function gradientBackground() {
   const c = document.createElement("canvas");
   c.width = 2; c.height = 512;
   const g = c.getContext("2d");
   const grd = g.createLinearGradient(0, 0, 0, 512);
-  grd.addColorStop(0, "#f7f9fc");
-  grd.addColorStop(0.55, "#eaeef4");
-  grd.addColorStop(1, "#dfe4ec");
+  grd.addColorStop(0, "#4a3a63");
+  grd.addColorStop(0.5, "#382a52");
+  grd.addColorStop(1, "#241a38");
   g.fillStyle = grd;
   g.fillRect(0, 0, 2, 512);
   const tex = new THREE.CanvasTexture(c);
@@ -41,13 +41,13 @@ scene.background = gradientBackground();
 // --- Éclairage image-based (IBL) : lumière douce et réaliste ---
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.45;
+scene.environmentIntensity = 0.5;
 
-// --- Lumières d'appoint (le soleil porte les ombres) ---
-const hemi = new THREE.HemisphereLight("#ffffff", "#cdc8bd", 0.22);
+// --- Lumières d'appoint : ambiance nocturne douce, teintée rose/mauve ---
+const hemi = new THREE.HemisphereLight("#f2e6ff", "#3a2b52", 0.55);
 scene.add(hemi);
 
-const sun = new THREE.DirectionalLight("#fff6ea", 1.7);
+const sun = new THREE.DirectionalLight("#fff2f7", 1.4);
 sun.position.set(7, 14, 5);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -62,7 +62,7 @@ sun.shadow.normalBias = 0.02;
 sun.shadow.radius = 6;
 scene.add(sun);
 
-const fill = new THREE.DirectionalLight("#e6ecff", 0.28);
+const fill = new THREE.DirectionalLight("#ff9ec9", 0.35); // remplissage rose
 fill.position.set(-9, 7, -5);
 scene.add(fill);
 
@@ -77,7 +77,7 @@ shadowPlane.receiveShadow = true;
 scene.add(shadowPlane);
 
 // --- Caméras ---
-const perspCam = new THREE.PerspectiveCamera(55, 1, 0.1, 200);
+const perspCam = new THREE.PerspectiveCamera(36, 1, 0.1, 200);
 const orthoCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
 let activeCam = perspCam;
 
@@ -101,7 +101,7 @@ let selectedId = null;
 let renderPass = null;
 let gtaoPass = null;
 
-const toggles = { roof: false, grid: false, labels: true };
+const toggles = { roof: false, grid: false, labels: true, xray: false };
 
 function frameCameras() {
   const size = new THREE.Vector3();
@@ -118,9 +118,10 @@ function frameCameras() {
   const availH = Math.max(window.innerHeight - topPx, 200);
 
   // --- Perspective : cible décalée pour centrer l'appart dans la zone utile ---
-  const offX = (panelPx / window.innerWidth) * maxDim * 0.6;
-  perspControls.target.set(center.x + offX, 0.8, center.z);
-  perspCam.position.set(center.x + offX + maxDim * 0.85, maxDim * 1.05, center.z + maxDim * 1.15);
+  const offX = (panelPx / window.innerWidth) * maxDim * 0.9;
+  perspControls.target.set(center.x + offX, 0.6, center.z);
+  // FOV réduit (~iso) → caméra plus loin.
+  perspCam.position.set(center.x + offX + maxDim * 1.4, maxDim * 1.7, center.z + maxDim * 1.9);
   perspCam.updateProjectionMatrix();
 
   // --- Ortho (plan) : on cadre l'appart dans la zone utile, frustum sur toute la fenêtre ---
@@ -146,6 +147,7 @@ function rebuildShell() {
   ceilingsGroup = built.ceilings;
   ceilingsGroup.visible = toggles.roof;
   bounds = built.bounds;
+  setWallsTransparent(shellGroup, toggles.xray);
   scene.add(shellGroup);
 
   if (grid) scene.remove(grid);
@@ -250,11 +252,11 @@ function setPerspTop() {
   const center = new THREE.Vector3(); bounds.getCenter(center);
   const maxDim = Math.max(size.x, size.z);
   const wide = window.innerWidth > 780;
-  const offX = wide ? (340 / window.innerWidth) * maxDim * 0.6 : 0;
+  const offX = wide ? (340 / window.innerWidth) * maxDim * 0.9 : 0;
   perspControls.target.set(center.x + offX, 0, center.z);
   // Vue quasi-verticale, mais vue depuis un peu au sud (offset en Z) pour garder
-  // le nord en haut sans "roulis" et laisser un léger relief 3D.
-  perspCam.position.set(center.x + offX, maxDim * 1.75, center.z + maxDim * 0.28);
+  // le nord en haut sans "roulis" et laisser un léger relief 3D. FOV réduit → plus haut.
+  perspCam.position.set(center.x + offX, maxDim * 2.7, center.z + maxDim * 0.45);
   perspCam.updateProjectionMatrix();
 }
 
@@ -295,6 +297,11 @@ document.getElementById("toggle-grid").addEventListener("click", (e) => {
   toggles.grid = !toggles.grid;
   if (grid) grid.visible = toggles.grid;
   e.currentTarget.classList.toggle("active", toggles.grid);
+});
+document.getElementById("toggle-xray").addEventListener("click", (e) => {
+  toggles.xray = !toggles.xray;
+  setWallsTransparent(shellGroup, toggles.xray);
+  e.currentTarget.classList.toggle("active", toggles.xray);
 });
 document.getElementById("toggle-labels").addEventListener("click", (e) => {
   toggles.labels = !toggles.labels;

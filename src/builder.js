@@ -6,19 +6,30 @@ import * as THREE from "three";
  * à part (furniture.js) car ils sont déplaçables.
  */
 
+// Palette "diorama nocturne" (inspiration : lavande + rose poudré + socle prune).
+const COLORS = {
+  wall: "#e7e1f2",       // lavande (extérieur)
+  accent: "#e0568a",     // rose magenta (murs d'accent)
+  slab: "#2b2340",       // socle prune sombre
+  skirting: "#d8477f",   // plinthe magenta
+};
+
+function makeWallMat() {
+  return new THREE.MeshStandardMaterial({ color: COLORS.wall, roughness: 0.9 });
+}
 const MATS = {
-  wall: new THREE.MeshStandardMaterial({ color: "#f4f2ee", roughness: 0.97 }),
   ceiling: new THREE.MeshStandardMaterial({
     color: "#ffffff", roughness: 1, transparent: true, opacity: 0.9,
     side: THREE.DoubleSide,
   }),
   glass: new THREE.MeshPhysicalMaterial({
-    color: "#cfe4ec", roughness: 0.05, metalness: 0,
-    transparent: true, opacity: 0.28, transmission: 0.2,
+    color: "#cdd6ec", roughness: 0.05, metalness: 0,
+    transparent: true, opacity: 0.3, transmission: 0.2,
   }),
-  frame: new THREE.MeshStandardMaterial({ color: "#eeece7", roughness: 0.6 }),
-  radiator: new THREE.MeshStandardMaterial({ color: "#fafafa", roughness: 0.45, metalness: 0.1 }),
-  skirting: new THREE.MeshStandardMaterial({ color: "#ffffff", roughness: 0.7 }),
+  frame: new THREE.MeshStandardMaterial({ color: "#f3eff7", roughness: 0.6 }),
+  radiator: new THREE.MeshStandardMaterial({ color: "#faf7fb", roughness: 0.45, metalness: 0.1 }),
+  slab: new THREE.MeshStandardMaterial({ color: COLORS.slab, roughness: 0.85 }),
+  skirting: new THREE.MeshStandardMaterial({ color: COLORS.skirting, roughness: 0.55 }),
 };
 
 function sideFrame(room, side) {
@@ -106,6 +117,31 @@ function addOpeningFrame(group, room, side, op, t) {
   group.add(sub);
 }
 
+// Plinthe magenta le long du pied d'un mur (côté intérieur).
+function addSkirting(group, room, side, t) {
+  const fr = sideFrame(room, side);
+  const len = side === "N" || side === "S" ? room.width : room.depth;
+  const h = 0.06;
+  const cx = fr.sx + fr.dx * (len / 2) + fr.inx * (t / 2 + 0.015);
+  const cz = fr.sz + fr.dz * (len / 2) + fr.inz * (t / 2 + 0.015);
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(len, h, 0.03), MATS.skirting);
+  bar.rotation.y = isVertical(side) ? Math.PI / 2 : 0;
+  bar.position.set(cx, h / 2, cz);
+  group.add(bar);
+}
+
+// Active/désactive la transparence des murs (mode "voir dedans").
+export function setWallsTransparent(shellGroup, on) {
+  if (!shellGroup) return;
+  shellGroup.traverse((o) => {
+    if (o.userData && o.userData.isWall && o.material) {
+      o.material.transparent = on;
+      o.material.opacity = on ? 0.15 : 1;
+      o.material.depthWrite = !on;
+    }
+  });
+}
+
 export function buildApartment(apartment) {
   const group = new THREE.Group();
   group.name = "shell";
@@ -127,30 +163,49 @@ export function buildApartment(apartment) {
     bounds.max.x = Math.max(bounds.max.x, room.x + room.width);
     bounds.max.z = Math.max(bounds.max.z, room.z + room.depth);
 
+    const cx = room.x + room.width / 2;
+    const cz = room.z + room.depth / 2;
+    const accent = new Set(room.accentWalls || []);
+
+    // --- Socle flottant (effet diorama) ---
+    const slab = new THREE.Mesh(
+      new THREE.BoxGeometry(room.width + 0.3, 0.5, room.depth + 0.3),
+      MATS.slab
+    );
+    slab.position.set(cx, -0.25, cz);
+    slab.receiveShadow = true;
+    group.add(slab);
+
     // --- Sol ---
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(room.width, room.depth),
-      new THREE.MeshStandardMaterial({ color: room.floorColor || "#e6dccb", roughness: 0.85 })
+      new THREE.MeshStandardMaterial({ color: room.floorColor || "#f0dee0", roughness: 0.8 })
     );
     floor.rotation.x = -Math.PI / 2;
-    floor.position.set(room.x + room.width / 2, 0.002, room.z + room.depth / 2);
+    floor.position.set(cx, 0.002, cz);
     floor.receiveShadow = true;
     group.add(floor);
 
     // --- Plafond (masqué par défaut) ---
     const ceil = new THREE.Mesh(new THREE.PlaneGeometry(room.width, room.depth), MATS.ceiling);
     ceil.rotation.x = Math.PI / 2;
-    ceil.position.set(room.x + room.width / 2, H, room.z + room.depth / 2);
+    ceil.position.set(cx, H, cz);
     ceilings.add(ceil);
 
     // --- Murs + menuiseries ---
     for (const side of ["N", "S", "E", "W"]) {
       const ops = (room.openings || []).filter((o) => o.side === side);
-      const wall = new THREE.Mesh(wallGeometry(wallLength(room, side), H, t, ops), MATS.wall);
+      const wmat = makeWallMat();
+      if (accent.has(side)) wmat.color.set(COLORS.accent);
+      const wall = new THREE.Mesh(wallGeometry(wallLength(room, side), H, t, ops), wmat);
       wall.castShadow = true;
       wall.receiveShadow = true;
+      wall.userData.isWall = true;
       placeWall(wall, room, side, t);
       group.add(wall);
+
+      // Plinthe magenta au pied du mur (côté intérieur).
+      addSkirting(group, room, side, t);
 
       for (const op of ops) {
         if (op.type !== "opening") addOpeningFrame(group, room, side, op, t);

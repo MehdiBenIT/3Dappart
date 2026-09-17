@@ -49,7 +49,8 @@ export const apartment = {
       id: "chambre",
       name: "Chambre",
       x: 0, z: 0, width: 3.0, depth: 3.2,
-      floorColor: "#e7dcc7",
+      floorColor: "#f1dfe1",
+      accentWalls: ["N", "W"],
       openings: [
         { type: "window", side: "N", offset: 1.0, width: 1.2, height: 1.4, sill: 0.9 },
         { type: "door", side: "E", offset: 0.4, width: 0.9, height: 2.1 }, // vers salle de vie
@@ -63,7 +64,8 @@ export const apartment = {
       id: "sdb",
       name: "Salle de bain",
       x: 0, z: 3.2, width: 3.0, depth: 2.2,
-      floorColor: "#ecedef",
+      floorColor: "#ecdfe6",
+      accentWalls: ["W"],
       openings: [
         { type: "door", side: "N", offset: 0.5, width: 0.8, height: 2.1 }, // depuis la chambre
       ],
@@ -75,7 +77,8 @@ export const apartment = {
       id: "sejour",
       name: "Salle de vie",
       x: 3.0, z: 0, width: 5.0, depth: 5.4,
-      floorColor: "#e7dcc7",
+      floorColor: "#f1dfe1",
+      accentWalls: ["N", "E"],
       openings: [
         { type: "window", side: "N", offset: 1.5, width: 1.4, height: 1.4, sill: 0.9 },
         { type: "window", side: "N", offset: 3.3, width: 1.4, height: 1.4, sill: 0.9 },
@@ -93,7 +96,8 @@ export const apartment = {
       id: "couloir",
       name: "Entrée / Couloir",
       x: 5.5, z: 5.4, width: 1.6, depth: 2.4,
-      floorColor: "#e4dac6",
+      floorColor: "#eeddDF",
+      accentWalls: ["E"],
       openings: [
         { type: "opening", side: "N", offset: 0.25, width: 1.0, height: 2.1 }, // vers salle de vie
         { type: "door", side: "S", offset: 0.4, width: 0.9, height: 2.1 },      // porte d'entrée
@@ -106,11 +110,11 @@ export const apartment = {
   furniture: [
     // Chambre
     { id: "lit", name: "Lit double", type: "bed", room: "chambre",
-      x: 1.5, z: 1.5, w: 1.4, d: 1.9, h: 0.5, rotation: 0, color: "#b5895b" },
+      x: 1.5, z: 1.5, w: 1.4, d: 1.9, h: 0.5, rotation: 0, color: "#b98d5e" },
     { id: "commode", name: "Commode", type: "dresser", room: "chambre",
-      x: 0.45, z: 2.7, w: 0.8, d: 0.45, h: 0.9, rotation: 90, color: "#7a5c3c" },
+      x: 0.45, z: 2.7, w: 0.8, d: 0.45, h: 0.9, rotation: 90, color: "#9c7346" },
     { id: "chaise", name: "Chaise", type: "chair", room: "chambre",
-      x: 2.6, z: 0.55, w: 0.45, d: 0.45, h: 0.9, rotation: 0, color: "#63666d" },
+      x: 2.6, z: 0.55, w: 0.45, d: 0.45, h: 0.9, rotation: 0, color: "#2b2b30" },
 
     // Salle de bain
     { id: "douche", name: "Douche", type: "shower", room: "sdb",
@@ -122,21 +126,21 @@ export const apartment = {
 
     // Salle de vie — coin salon
     { id: "canape", name: "Canapé", type: "sofa", room: "sejour",
-      x: 4.3, z: 3.0, w: 2.0, d: 0.9, h: 0.8, rotation: 90, color: "#8b9ca7" },
+      x: 4.3, z: 3.0, w: 2.0, d: 0.9, h: 0.8, rotation: 90, color: "#f2f0ee" },
     { id: "meuble-tv", name: "Meuble TV", type: "tv-unit", room: "sejour",
-      x: 7.7, z: 3.0, w: 1.6, d: 0.4, h: 0.5, rotation: 90, color: "#2b2b2e" },
+      x: 7.7, z: 3.0, w: 1.6, d: 0.4, h: 0.5, rotation: 90, color: "#1f1f22" },
     { id: "tv", name: "TV", type: "tv", room: "sejour",
-      x: 7.9, z: 3.0, w: 1.1, d: 0.06, h: 0.65, rotation: 90, color: "#161618" },
+      x: 7.9, z: 3.0, w: 1.1, d: 0.06, h: 0.65, rotation: 90, color: "#141416" },
     { id: "bureau", name: "Bureau", type: "desk", room: "sejour",
-      x: 5.0, z: 0.45, w: 1.4, d: 0.6, h: 0.75, rotation: 0, color: "#b5895b" },
+      x: 5.0, z: 0.45, w: 1.4, d: 0.6, h: 0.75, rotation: 0, color: "#b98d5e" },
 
     // Salle de vie — coin cuisine (sud-ouest)
     { id: "frigo", name: "Frigo", type: "fridge", room: "sejour",
-      x: 3.4, z: 4.9, w: 0.6, d: 0.6, h: 1.8, rotation: 0, color: "#c9ccd1" },
+      x: 3.4, z: 4.9, w: 0.6, d: 0.6, h: 1.8, rotation: 0, color: "#eef0f2" },
     { id: "plan-cuisine", name: "Plan cuisine", type: "counter", room: "sejour",
-      x: 4.7, z: 5.0, w: 2.0, d: 0.6, h: 0.9, rotation: 0, color: "#a9865c" },
+      x: 4.7, z: 5.0, w: 2.0, d: 0.6, h: 0.9, rotation: 0, color: "#b98d5e" },
     { id: "rangement", name: "Rangement", type: "storage", room: "sejour",
-      x: 3.4, z: 3.5, w: 0.9, d: 0.6, h: 2.0, rotation: 90, color: "#8a6a44" },
+      x: 3.4, z: 3.5, w: 0.9, d: 0.6, h: 2.0, rotation: 90, color: "#26262b" },
   ],
 
   // Idées / achats par pièce (synchronisables avec TickTick).
