@@ -241,23 +241,51 @@ window.addEventListener("pointermove", onPointerMove);
 window.addEventListener("pointerup", onPointerUp);
 
 // ---- Vues ----
+// "3d" = perspective inclinée · "dessus" = perspective à la verticale (3D) · "plan" = orthographique à plat
+let currentView = "3d";
+
+// Place la caméra perspective à la verticale, au-dessus du centre (vue de dessus 3D).
+function setPerspTop() {
+  const size = new THREE.Vector3(); bounds.getSize(size);
+  const center = new THREE.Vector3(); bounds.getCenter(center);
+  const maxDim = Math.max(size.x, size.z);
+  const wide = window.innerWidth > 780;
+  const offX = wide ? (340 / window.innerWidth) * maxDim * 0.6 : 0;
+  perspControls.target.set(center.x + offX, 0, center.z);
+  // Vue quasi-verticale, mais vue depuis un peu au sud (offset en Z) pour garder
+  // le nord en haut sans "roulis" et laisser un léger relief 3D.
+  perspCam.position.set(center.x + offX, maxDim * 1.75, center.z + maxDim * 0.28);
+  perspCam.updateProjectionMatrix();
+}
+
 function setView(mode) {
-  const is3D = mode === "3d";
-  activeCam = is3D ? perspCam : orthoCam;
+  currentView = mode;
+  const usePersp = mode !== "plan";
+  activeCam = usePersp ? perspCam : orthoCam;
   if (renderPass) renderPass.camera = activeCam;
   if (gtaoPass) gtaoPass.camera = activeCam;
-  perspControls.enabled = is3D;
-  topControls.enabled = !is3D;
-  document.getElementById("view-3d").classList.toggle("active", is3D);
-  document.getElementById("view-top").classList.toggle("active", !is3D);
-  document.getElementById("hud-hint").textContent = is3D
-    ? "Clique-glisse un meuble pour le déplacer • molette pour zoomer • clic droit pour tourner la vue"
-    : "Vue plan : clique-glisse un meuble pour le positionner au centimètre • molette pour zoomer";
+  perspControls.enabled = usePersp;
+  topControls.enabled = !usePersp;
+
+  if (mode === "dessus") setPerspTop();
+  else if (mode === "3d") frameCameras();
+
+  document.getElementById("view-3d").classList.toggle("active", mode === "3d");
+  document.getElementById("view-dessus").classList.toggle("active", mode === "dessus");
+  document.getElementById("view-top").classList.toggle("active", mode === "plan");
+
+  const hints = {
+    "3d": "Clique-glisse un meuble pour le déplacer • molette pour zoomer • clic droit pour tourner la vue",
+    dessus: "Vue de dessus 3D • clique-glisse un meuble pour le déplacer • molette pour zoomer",
+    plan: "Vue plan • clique-glisse un meuble pour le positionner au centimètre • molette pour zoomer",
+  };
+  document.getElementById("hud-hint").textContent = hints[mode];
 }
 
 // ---- Toolbar ----
 document.getElementById("view-3d").addEventListener("click", () => setView("3d"));
-document.getElementById("view-top").addEventListener("click", () => setView("top"));
+document.getElementById("view-dessus").addEventListener("click", () => setView("dessus"));
+document.getElementById("view-top").addEventListener("click", () => setView("plan"));
 document.getElementById("toggle-roof").addEventListener("click", (e) => {
   toggles.roof = !toggles.roof;
   if (ceilingsGroup) ceilingsGroup.visible = toggles.roof;
@@ -351,7 +379,10 @@ function resize() {
   gtaoPass.setSize(w, h);
   perspCam.aspect = w / h;
   perspCam.updateProjectionMatrix();
-  if (bounds) frameCameras();
+  if (bounds) {
+    frameCameras();
+    if (currentView === "dessus") setPerspTop();
+  }
 }
 window.addEventListener("resize", resize);
 resize();
