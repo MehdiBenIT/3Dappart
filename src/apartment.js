@@ -196,4 +196,27 @@ export const apartment = {
       label: "Miroir d'entrée",
       note: "Agrandit visuellement le couloir et pratique avant de sortir." },
   ],
+
+  // Inspirations (modifiables dans l'onglet Inspiration).
+  // category : "Ambiance" | "Gain de place" | "Déco"
+  inspiration: [
+    { id: "i1", category: "Ambiance", title: "Japandi épuré",
+      note: "Bois clair, blanc cassé, lignes nettes, quelques touches noires. Chaleureux mais minimaliste.",
+      palette: ["#e9ddc9", "#f4f2ee", "#b98d5e", "#2b2b2e"] },
+    { id: "i2", category: "Ambiance", title: "Cosy nuit (prune & rose)",
+      note: "Ambiance douce et feutrée : murs lavande, touches rose poudré, lin et bois. (Ton style de réf.)",
+      palette: ["#e7e1f2", "#e0568a", "#f0dee0", "#2b2340"] },
+    { id: "i3", category: "Gain de place", title: "Lit-coffre + boîtes sous-lit",
+      note: "Toute la place perdue sous le lit devient du rangement pour couettes, valises, linge de saison.",
+      palette: [] },
+    { id: "i4", category: "Gain de place", title: "Mur d'étagères au-dessus du bureau",
+      note: "On range en hauteur : le plan de travail reste dégagé et le sol respire.",
+      palette: [] },
+    { id: "i5", category: "Déco", title: "Coin lecture + lampe chaude",
+      note: "Un fauteuil compact, une lampe à lumière chaude et une plante : le salon devient accueillant sans encombrer.",
+      palette: ["#f2f0ee", "#8b9ca7", "#6f8f6a"] },
+    { id: "i6", category: "Déco", title: "Entrée fonctionnelle",
+      note: "Banc + patères + miroir : tout se pose et s'accroche en rentrant, fini le bazar dans le couloir.",
+      palette: [] },
+  ],
 };

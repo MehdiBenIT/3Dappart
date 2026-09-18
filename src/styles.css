@@ -163,10 +163,66 @@ select option { color: #111; }
   border: 1px solid var(--line); backdrop-filter: blur(6px); display: none;
 }
 
+/* ---- Navigation entre pages ---- */
+#pagenav { display: flex; gap: 4px; margin-right: 6px; }
+#pagenav button { border-radius: 9px; padding: 6px 12px; font-weight: 600; }
+#pagenav button.active { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* Masque les éléments propres à la 3D quand on est sur une autre page. */
+body:not([data-page="3d"]) #scene,
+body:not([data-page="3d"]) #panel,
+body:not([data-page="3d"]) #hud,
+body:not([data-page="3d"]) #placeholder-banner,
+body:not([data-page="3d"]) .tools-3d,
+body:not([data-page="3d"]) .rc-cluster { display: none !important; }
+
+/* Pages secondaires */
+.page { display: none; position: absolute; inset: 0; z-index: 3; overflow-y: auto; padding: 80px 20px 40px; }
+body[data-page="optim"] #page-optim,
+body[data-page="inspiration"] #page-inspiration { display: block; }
+.page-inner { max-width: 980px; margin: 0 auto; }
+.page-head h1 { margin: 0 0 6px; font-size: 24px; }
+.page-head .lead { color: var(--muted); margin: 0 0 22px; max-width: 640px; line-height: 1.5; }
+.page h2 { font-size: 17px; margin: 26px 0 12px; }
+
+/* Diagnostic (problèmes → solutions) */
+.diag-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.diag-card { border: 1px solid var(--line); background: var(--card); border-radius: 14px; padding: 16px; }
+.diag-ico { font-size: 26px; }
+.diag-card h3 { margin: 8px 0 8px; font-size: 16px; }
+.diag-card p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.5; color: #e6ddf2; }
+.diag-card .prob b { color: #ffb0b0; }
+.diag-card .sol b { color: #a9f0c0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: rgba(239,122,163,0.16); color: #ffc6db; }
+
+/* Liste d'achats (page) */
+.shop { margin-top: 10px; }
+.shop-head { display: flex; align-items: center; justify-content: space-between; }
+.shop-actions { display: flex; align-items: center; gap: 12px; }
+.tally { color: var(--muted); font-size: 13px; }
+.btn { padding: 7px 12px; border-radius: 10px; }
+.add-form.wide { max-width: 460px; }
+.add-form .row { display: flex; gap: 8px; }
+.add-form .row > * { flex: 1; }
+
+/* Inspiration */
+.insp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.insp-card { border: 1px solid var(--line); background: var(--card); border-radius: 14px; overflow: hidden; }
+.swatches { display: flex; height: 70px; }
+.swatches span { flex: 1; }
+.swatches.empty { align-items: center; justify-content: center; font-size: 26px; background: rgba(255,255,255,0.04); }
+.insp-body { padding: 12px 14px; }
+.insp-top { display: flex; align-items: center; gap: 8px; }
+.insp-top h3 { margin: 0; font-size: 15px; flex: 1; }
+.insp-body p { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45; }
+.insp-link { display: inline-block; margin-top: 8px; color: var(--accent); font-size: 13px; }
+
 @media (max-width: 900px) {
-  #toolbar { right: 12px; }
+  #toolbar { right: 12px; flex-wrap: wrap; }
   #panel { top: auto; bottom: 84px; left: 12px; right: 12px; width: auto; max-height: 38%; }
   #mode-pad, #focus-pad { left: 50%; }
   #side-pad { right: 12px; }
   #placeholder-banner { display: none; }
+  .page { padding: 96px 14px 32px; }
 }
