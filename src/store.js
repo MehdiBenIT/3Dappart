@@ -16,6 +16,8 @@ class Store extends EventTarget {
   constructor() {
     super();
     this.state = this._load();
+    if (!this.state.shopping) this.state.shopping = [];
+    if (!this.state.inspiration) this.state.inspiration = clone(defaultApartment.inspiration || []);
   }
 
   _load() {
@@ -83,8 +85,21 @@ class Store extends EventTarget {
     this._emit(false);
   }
 
+  addInspiration(entry) {
+    if (!this.state.inspiration) this.state.inspiration = [];
+    this.state.inspiration.push(entry);
+    this._emit(false);
+  }
+
+  removeInspiration(id) {
+    this.state.inspiration = (this.state.inspiration || []).filter((x) => x.id !== id);
+    this._emit(false);
+  }
+
   reset() {
     this.state = clone(defaultApartment);
+    if (!this.state.shopping) this.state.shopping = [];
+    if (!this.state.inspiration) this.state.inspiration = clone(defaultApartment.inspiration || []);
     this._emit(true);
   }
 
@@ -103,6 +118,7 @@ class Store extends EventTarget {
     if (!data.rooms || !data.furniture) throw new Error("Fichier invalide");
     this.state = data;
     if (!this.state.shopping) this.state.shopping = [];
+    if (!this.state.inspiration) this.state.inspiration = [];
     this._emit(true);
   }
 }

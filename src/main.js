@@ -9,6 +9,7 @@ import { store } from "./store.js";
 import { buildApartment, setWallsTransparent, setFocusRoom } from "./builder.js";
 import { buildFurniture, setLabelsVisible, highlightFurniture } from "./furniture.js";
 import { initUI } from "./ui.js";
+import { initPages } from "./pages.js";
 import { IS_PLACEHOLDER } from "./apartment.js";
 
 const canvas = document.getElementById("scene");
@@ -389,6 +390,18 @@ bind("focus-all", clearFocus);
 document.querySelectorAll("#focus-pad .rnd[data-room]").forEach((b) =>
   b.addEventListener("click", () => focusRoom(b.dataset.room)));
 
+// ---- Navigation entre pages (Vue 3D / Optimisation / Inspiration) ----
+initPages();
+function setPage(page) {
+  document.body.dataset.page = page;
+  document.querySelectorAll("#pagenav button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.page === page));
+  if (page === "3d") resize(); // recadre la 3D au retour
+}
+document.querySelectorAll("#pagenav button").forEach((b) =>
+  b.addEventListener("click", () => setPage(b.dataset.page)));
+document.body.dataset.page = "3d";
+
 bind("export-json", () => store.exportJSON());
 bind("reset", () => {
   if (confirm("Réinitialiser depuis la configuration d'origine ? Tes modifications seront perdues.")) store.reset();
@@ -465,6 +478,8 @@ resize();
 
 function animate() {
   requestAnimationFrame(animate);
+  // Ne rend la 3D que sur la page "Vue 3D" (économie GPU sur les autres pages).
+  if (document.body.dataset.page && document.body.dataset.page !== "3d") return;
   perspControls.update();
   topControls.update();
   composer.render();

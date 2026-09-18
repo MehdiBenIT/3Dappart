@@ -201,7 +201,7 @@ export function initUI({ onSelectFurniture, onFocusRoom } = {}) {
   function refresh() {
     renderRooms();
     renderFurniture();
-    renderShopping();
+    // La liste "À acheter" vit désormais sur la page Optimisation (pages.js).
   }
 
   refresh();

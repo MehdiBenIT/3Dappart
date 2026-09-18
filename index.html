@@ -14,13 +14,16 @@
     <div id="app">
       <canvas id="scene"></canvas>
 
-      <!-- Barre d'outils haut (slim : marque + utilitaires) -->
+      <!-- Barre d'outils haut (slim : marque + navigation + utilitaires) -->
       <header id="toolbar">
         <div class="brand">🏠 Appart&nbsp;3D</div>
-        <div class="tools">
+        <nav id="pagenav">
+          <button data-page="3d" class="active">Vue 3D</button>
+          <button data-page="optim">🧩 Optimisation</button>
+          <button data-page="inspiration">✨ Inspiration</button>
+        </nav>
+        <div class="tools tools-3d">
           <button id="toggle-labels" class="active" title="Afficher / masquer les noms des meubles">Noms</button>
-          <button id="toggle-roof" title="Afficher / masquer les plafonds">Plafonds</button>
-          <button id="toggle-grid" title="Afficher / masquer la grille">Grille</button>
           <span class="sep"></span>
           <button id="export-json" title="Télécharger la configuration">⬇︎ Export</button>
           <button id="import-json" title="Charger une configuration">⬆︎ Import</button>
@@ -62,17 +65,15 @@
         <button class="rnd active" id="focus-all" title="Tout l'appartement">🏠</button>
       </div>
 
-      <!-- Panneau latéral -->
+      <!-- Panneau latéral (vue 3D) -->
       <aside id="panel">
         <nav class="tabs">
           <button data-tab="rooms" class="active">Pièces</button>
           <button data-tab="furniture">Meubles</button>
-          <button data-tab="shopping">À acheter</button>
         </nav>
         <div class="tab-body">
           <section data-panel="rooms" class="active"></section>
           <section data-panel="furniture"></section>
-          <section data-panel="shopping"></section>
         </div>
       </aside>
 
@@ -82,6 +83,10 @@
       </div>
 
       <input type="file" id="file-input" accept="application/json" hidden />
+
+      <!-- Pages secondaires (masquées sauf sur leur onglet) -->
+      <main id="page-optim" class="page"></main>
+      <main id="page-inspiration" class="page"></main>
     </div>
     <script type="module" src="/src/main.js"></script>
   </body>
